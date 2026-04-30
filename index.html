@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yohana Ansari-Thomas</title>
+<style>
+  /* ============================================================
+     CONFIGURATION — edit these to adjust layout
+  ============================================================ */
+  :root {
+    --img-padding: 32px;
+    --img1-width: 48vw;
+    --img1-max-height: 70vh;
+    --video-width: 42vw;
+    --video-max-height: 60vh;
+    --header-size: 13px;
+    --bio-font-size: 17px;
+  }
+ 
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+ 
+  html, body {
+    width: 100%; height: 100%;
+    background: #000;
+    color: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+    overflow: hidden;
+  }
+ 
+  /* HEADER */
+  #header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--img-padding);
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  #header.hidden { opacity: 0; pointer-events: none; }
+ 
+  #header button {
+    background: none;
+    border: none;
+    color: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: var(--header-size);
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    pointer-events: all;
+    padding: 4px 0;
+    text-transform: uppercase;
+  }
+  #header button:hover { opacity: 0.6; }
+ 
+  /* HOME */
+  #home {
+    position: fixed;
+    inset: 0;
+    transition: filter 0.5s ease;
+  }
+  #home.dimmed   { filter: blur(8px)  brightness(0.25); pointer-events: none; }
+  #home.dimmed-2 { filter: blur(14px) brightness(0.10); pointer-events: none; }
+ 
+  #img1-wrap {
+    position: absolute;
+    top: calc(var(--img-padding) * 2 + 24px);
+    left: var(--img-padding);
+    width: var(--img1-width);
+    max-height: var(--img1-max-height);
+  }
+  #img1 {
+    width: 100%;
+    max-height: var(--img1-max-height);
+    display: block;
+    object-fit: contain;
+  }
+ 
+  #video-wrap {
+    position: absolute;
+    bottom: var(--img-padding);
+    right: var(--img-padding);
+    width: var(--video-width);
+    max-height: var(--video-max-height);
+  }
+  #home-video {
+    width: 100%;
+    max-height: var(--video-max-height);
+    display: block;
+    object-fit: contain;
+  }
+ 
+  .placeholder {
+    width: 100%;
+    background: #0a0a0a;
+    border: 1px dashed #2a2a2a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #555;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: center;
+    padding: 20px;
+    line-height: 1.6;
+  }
+  #img1-placeholder  { aspect-ratio: 4 / 3; }
+  #video-placeholder { aspect-ratio: 16 / 9; }
+ 
+  /* PANELS */
+  .panel {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+  }
+  .panel.open { opacity: 1; pointer-events: all; }
+ 
+  .back-btn {
+    position: fixed;
+    top: var(--img-padding);
+    left: var(--img-padding);
+    z-index: 300;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 22px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px 8px;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  .back-btn:hover { opacity: 0.6; }
+ 
+  /* INFO */
+  #info-panel .info-content {
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 50%;
+    padding: 52px 52px 52px 48px;
+    overflow-y: auto;
+  }
+  .bio-text {
+    font-size: var(--bio-font-size);
+    line-height: 1.65;
+    margin-top: 48px;
+  }
+  .bio-text p + p { margin-top: 1.4em; }
+ 
+  .info-links {
+    margin-top: 48px;
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+  .info-links a {
+    color: #fff;
+    text-decoration: none;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .info-links a:hover { opacity: 0.6; }
+  .link-icon { font-size: 14px; }
+ 
+  /* MORE — instant open, animated dim, pass pointer events through the panel itself */
+  #more-panel           { transition: filter 0.5s ease; }
+  #more-panel.open      { pointer-events: none; }
+  #more-panel.open .more-thumb { pointer-events: all; }
+  #more-panel.dimmed    { filter: blur(8px) brightness(0.25); }
+
+  /* Info panel sits above more-panel so bio text is readable over dimmed thumbs */
+  #info-panel           { z-index: 210; }
+
+  /* Home media elements become draggable while more is open */
+  #img1-wrap.draggable,
+  #video-wrap.draggable {
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+  #img1-wrap.draggable:active,
+  #video-wrap.draggable:active { cursor: grabbing; }
+
+  /* MORE */
+  .more-thumb {
+    position: absolute;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    transition: box-shadow 0.2s;
+    background: #0a0a0a;
+    max-width: 85vw;
+  }
+  .more-thumb:active { cursor: grabbing; }
+  .more-thumb:hover  { box-shadow: 0 0 0 1px rgba(255,255,255,0.3); }
+ 
+  .more-thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+    -webkit-user-drag: none;
+  }
+
+ 
+  .more-thumb.placeholder-thumb {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed #2a2a2a;
+    color: #444;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+ 
+  /* LIGHTBOX */
+  #lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+  }
+  #lightbox.open { opacity: 1; pointer-events: all; }
+ 
+  #lightbox .lb-image-wrap {
+    position: relative;
+    max-width: calc(100vw - 120px);
+    max-height: calc(100vh - 80px);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+ 
+  #lightbox img {
+    display: block;
+    max-width: 100%;
+    max-height: calc(100vh - 130px);
+    object-fit: contain;
+    pointer-events: none;
+    -webkit-user-drag: none;
+  }
+ 
+  #lb-placeholder {
+    width: min(70vw, 800px);
+    aspect-ratio: 4 / 3;
+  }
+ 
+  .lb-caption {
+    margin-top: 14px;
+    padding-left: 2px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: rgba(255,255,255,0.75);
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+ 
+  .lb-arrow {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 28px;
+    cursor: pointer;
+    z-index: 600;
+    padding: 16px;
+    opacity: 0.7;
+    font-family: Arial, Helvetica, sans-serif;
+    line-height: 1;
+  }
+  .lb-arrow:hover    { opacity: 1; }
+  .lb-arrow.disabled { opacity: 0.15; cursor: default; }
+  #lb-prev { left: 20px; }
+  #lb-next { right: 20px; }
+ 
+  #lb-close {
+    position: fixed;
+    top: 24px;
+    right: 28px;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 22px;
+    cursor: pointer;
+    z-index: 600;
+    padding: 4px 8px;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  #lb-close:hover { opacity: 0.6; }
+ 
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    :root {
+      --img-padding: 16px;
+      --img1-width: 88vw;
+      --video-width: 80vw;
+      --img1-max-height: 50vh;
+      --video-max-height: 45vh;
+    }
+    #info-panel .info-content {
+      width: 100%;
+      padding: 64px 24px 40px 24px;
+    }
+    .bio-text { font-size: 15px; margin-top: 24px; }
+    #lightbox .lb-image-wrap { max-width: calc(100vw - 60px); }
+    #lb-prev { left: 4px; }
+    #lb-next { right: 4px; }
+  }
+</style>
+</head>
+<body>
+ 
+<div id="header">
+  <button id="more-btn">MORE</button>
+  <button id="info-btn">INFO</button>
+</div>
+ 
+<div id="home">
+  <div id="img1-wrap">
+    <img id="img1" src="images/bb/thesis_modelphoto.jpg" alt="" style="display:none;">
+    <div id="img1-placeholder" class="placeholder">
+      image 1<br>set src on &lt;img id="img1"&gt;
+    </div>
+  </div>
+ 
+  <div id="video-wrap">
+    <video id="home-video" autoplay muted loop playsinline style="display:none;">
+      <source src="videos/Y-ANSARI-THOMAS_BBFILM2025_reduced.mp4" type="video/mp4">
+    </video>
+    <div id="video-placeholder" class="placeholder">
+      video<br>add &lt;source src="…"&gt; inside &lt;video&gt;
+    </div>
+  </div>
+</div>
+ 
+<div id="info-panel" class="panel">
+  <button class="back-btn" data-close="info">←</button>
+  <div class="info-content">
+    <div class="bio-text">
+      <p>Yohana Ansari-Thomas is a designer and researcher living in Brooklyn, New York. Prior, he worked as a designer (etc.) in Oakland, CA.</p>
+      <p>Spanning art fabrication, furniture, custom hardware, buildings, installations, and written scholarship, his work has been presented at the Berkeley Art Museum and Pacific Film Archive, Harvard University's Carpenter Center for Visual Arts, the Solomon R. Guggenheim Museum, Art Omi, and the Venice Biennale of Architecture, among others. He holds a Bachelor of Arts from the University of California, Berkeley, and a Master of Architecture from Princeton University, where he received the School of Architecture's History and Theory Thesis Prize and the Howard Crosby Butler Travel Fellowship.</p>
+    </div>
+    <div class="info-links">
+      <a href="mailto:yansarithomas@gmail.com"><span>✉</span> EMAIL</a>
+      <a href="https://www.instagram.com/spatialmodule/" target="_blank" rel="noopener"><span>↗</span> INSTAGRAM</a>
+    </div>
+  </div>
+</div>
+ 
+<div id="more-panel" class="panel">
+
+  <!-- =========================================================
+       PROJECTS DATA — edit this JSON.
+       Each object = one draggable thumbnail + its carousel.
+         thumb   : path to thumbnail image
+         x, y    : initial position, in vw / vh
+         w       : thumbnail width in px
+         images  : carousel slides — { src, caption }
+  ========================================================= -->
+  <script id="projects-data" type="application/json">
+  [
+    {
+      "thumb": "images/bsllc-stagingarea/bsllc-stagingarea-thumb.jpg",
+      "x": 8, "y": 18, "w": 320,
+      "images": [
+        { "src": "images/bsllc-stagingarea/bsllc-stagingarea-LJ-1.jpg", "caption": "Staging Area: A Barn Raising in Two Acts, Besler & Sons, LLC., Art Omi (2024) Photo: Logan Jackson" },
+        { "src": "images/bsllc-stagingarea/bsllc-stagingarea-OS-18.jpg", "caption": "Staging Area: A Barn Raising in Two Acts, Besler & Sons, LLC., Art Omi (2024) Photo: Olympia Shannon" },
+        { "src": "images/bsllc-stagingarea/bsllc-stagingarea-OS-24.jpg", "caption": "Staging Area: A Barn Raising in Two Acts, Besler & Sons, LLC., Art Omi (2024) Photo: Olympia Shannon" },
+        { "src": "images/bsllc-stagingarea/bsllc-stagingarea-OS-15.jpg", "caption": "Staging Area: A Barn Raising in Two Acts, Besler & Sons, LLC., Art Omi (2024) Photo: Olympia Shannon" },
+        { "src": "images/bsllc-stagingarea/bsllc-stagingarea-LJ-2.jpg", "caption": "Staging Area: A Barn Raising in Two Acts, Besler & Sons, LLC., Art Omi (2024) Photo: Logan Jackson" },
+        { "src": "images/bsllc-stagingarea/bsllc-stagingarea-OS-19.jpg", "caption": "Staging Area: A Barn Raising in Two Acts, Besler & Sons, LLC., Art Omi (2024) Photo: Olympia Shannon" },
+        { "src": "images/bsllc-stagingarea/bsllc-stagingarea-OS-4.jpg", "caption": "Staging Area: A Barn Raising in Two Acts, Besler & Sons, LLC., Art Omi (2024) Photo: Olympia Shannon" },
+        { "src": "images/bsllc-stagingarea/bsllc-stagingarea-LJ-4.jpg", "caption": "Staging Area: A Barn Raising in Two Acts, Besler & Sons, LLC., Art Omi (2024) Photo: Logan Jackson" }
+      ]
+    },
+    {
+      "thumb": "images/fr-2023/fr_iso1.jpg",
+      "x": 40, "y": 36, "w": 300,
+      "images": [
+        { "src": "images/fr-2023/fr_iso1.jpg", "caption": "Field Recordings (2023)" },
+        { "src": "images/fr-2023/fr_iso2.jpg", "caption": "Field Recordings (2023)" },
+        { "src": "images/fr-2023/fr_elevation.jpg", "caption": "Field Recordings (2023)" },
+        { "src": "images/fr-2023/fr_section.jpg", "caption": "Field Recordings (2023)" },
+        { "src": "images/fr-2023/fr_detail.jpg", "caption": "Field Recordings (2023)" },
+        { "src": "images/fr-2023/fr_shareddetail.jpg", "caption": "Field Recordings (2023)" }
+      ]
+    },
+    {
+      "thumb": "images/smz_003/smz-003-thumb.jpg",
+      "x": 62, "y": 12, "w": 80,
+      "images": [
+        { "src": "images/smz_003/smz-som-1.jpg", "caption": "Custom wall-mounted hardware for Somnath Bhatt's Republic of Shadows, Galleryske, Delhi, India, December 17, 2025 through January 21, 2026. Photos courtesy of artist/gallery." },
+        { "src": "images/smz_003/smz-som-10.jpg", "caption": "Custom wall-mounted hardware for Somnath Bhatt's Republic of Shadows, Galleryske, Delhi, India, December 17, 2025 through January 21, 2026. Photos courtesy of artist/gallery." },
+        { "src": "images/smz_003/smz-som-12.jpg", "caption": "Custom wall-mounted hardware for Somnath Bhatt's Republic of Shadows, Galleryske, Delhi, India, December 17, 2025 through January 21, 2026. Photos courtesy of artist/gallery." },
+        { "src": "images/smz_003/smz-som-14.jpg", "caption": "Custom wall-mounted hardware for Somnath Bhatt's Republic of Shadows, Galleryske, Delhi, India, December 17, 2025 through January 21, 2026. Photos courtesy of artist/gallery." },
+        { "src": "images/smz_003/smz-som-13.jpg", "caption": "Custom wall-mounted hardware for Somnath Bhatt's Republic of Shadows, Galleryske, Delhi, India, December 17, 2025 through January 21, 2026. Photos courtesy of artist/gallery." }
+      ]
+    },
+    {
+      "thumb": "images/sfss_lamp.jpg",
+      "x": 20, "y": 52, "w": 260,
+      "images": [
+        { "src": "images/sfss_lamp.jpg", "caption": "Superfast Scrap Lamp Study (2025)" }
+      ]
+    },
+
+    {
+      "thumb": "images/bb/bb_thumb.jpg",
+      "x": 85, "y": 36, "w": 220,
+      "images": [
+        { "src": "images/bb/bb_thumb.jpg", "caption": "The Bulldozer Ballet (2025)" },
+        { "src": "images/bb/thesis_modelphoto.jpg", "caption": "The Bulldozer Ballet (2025)" }
+      ]
+    }
+  ]
+  </script>
+</div>
+ 
+<div id="lightbox">
+  <button class="lb-arrow" id="lb-prev">←</button>
+  <button class="lb-arrow" id="lb-next">→</button>
+  <button id="lb-close">✕</button>
+  <div class="lb-image-wrap">
+    <img id="lb-img" alt="" style="display:none;">
+    <div id="lb-placeholder" class="placeholder" style="display:none;">
+      no image src — add one in projects-data
+    </div>
+    <div id="lb-caption" class="lb-caption"></div>
+  </div>
+</div>
+ 
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const header    = $('header');
+  const home      = $('home');
+  const infoPanel = $('info-panel');
+  const morePanel = $('more-panel');
+  const lightbox  = $('lightbox');
+  const lbImg     = $('lb-img');
+  const lbCaption = $('lb-caption');
+  const lbPH      = $('lb-placeholder');
+ 
+  function activateMedia (mediaEl, placeholderEl, hasSrcCheck) {
+    if (!hasSrcCheck()) return;
+    placeholderEl.style.display = 'none';
+    mediaEl.style.display = 'block';
+    mediaEl.addEventListener('error', () => {
+      mediaEl.style.display = 'none';
+      placeholderEl.style.display = 'flex';
+      placeholderEl.innerHTML = 'failed to load — check the path';
+    });
+  }
+ 
+  const img1 = $('img1');
+  activateMedia(img1, $('img1-placeholder'), () => {
+    const s = img1.getAttribute('src');
+    return s && s.trim() !== '';
+  });
+ 
+  const vid = $('home-video');
+  activateMedia(vid, $('video-placeholder'), () => {
+    const src = vid.querySelector('source');
+    return src && src.getAttribute('src') && src.getAttribute('src').trim() !== '';
+  });
+ 
+  let inMoreMode = false;
+
+  function openMore () {
+    inMoreMode = true;
+    morePanel.classList.add('open');
+    $('more-btn').textContent = 'LESS';
+    if (!morePanel.dataset.built) buildThumbs();
+  }
+
+  function closeMore () {
+    inMoreMode = false;
+    morePanel.classList.remove('open');
+    $('more-btn').textContent = 'MORE';
+  }
+
+  function openInfo () {
+    home.classList.add('dimmed');
+    infoPanel.classList.add('open');
+    header.classList.add('hidden');
+    if (inMoreMode) morePanel.classList.add('dimmed');
+  }
+
+  function closeInfo () {
+    home.classList.remove('dimmed', 'dimmed-2');
+    infoPanel.classList.remove('open');
+    header.classList.remove('hidden');
+    if (inMoreMode) morePanel.classList.remove('dimmed');
+  }
+
+  $('more-btn').addEventListener('click', () => inMoreMode ? closeMore() : openMore());
+  $('info-btn').addEventListener('click', openInfo);
+
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.close === 'info') closeInfo();
+    });
+  });
+ 
+  let projects = [];
+  try { projects = JSON.parse($('projects-data').textContent); }
+  catch(e) { console.error('projects-data JSON is invalid:', e); }
+
+  let topZ = 20;
+ 
+  function layoutThumbs () {
+    const scale = Math.min(1, window.innerWidth / 1000);
+    const pad = 16;
+    document.querySelectorAll('.more-thumb').forEach(thumb => {
+      if (!('baseW' in thumb.dataset)) return;
+      const w = Math.max(50, Math.round(parseFloat(thumb.dataset.baseW) * scale));
+      let left = Math.round(parseFloat(thumb.dataset.fracX) * window.innerWidth);
+      left = Math.max(pad, Math.min(left, window.innerWidth - w - pad));
+      let top = Math.round(parseFloat(thumb.dataset.fracY) * window.innerHeight);
+      top = Math.max(80, top);
+      thumb.style.width = w + 'px';
+      thumb.style.left  = left + 'px';
+      thumb.style.top   = top  + 'px';
+    });
+    // If home media have been intentionally dragged, keep them proportional on resize.
+    // If not yet dragged, fracX won't be set and CSS handles their layout.
+    [$('img1-wrap'), $('video-wrap')].forEach(el => {
+      if (!('fracX' in el.dataset)) return;
+      el.style.left = Math.round(parseFloat(el.dataset.fracX) * window.innerWidth)  + 'px';
+      el.style.top  = Math.round(parseFloat(el.dataset.fracY) * window.innerHeight) + 'px';
+    });
+  }
+
+  function buildThumbs () {
+    morePanel.dataset.built = '1';
+    projects.forEach((proj, pi) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'more-thumb';
+      const fracX = proj.x / 100;
+      const fracY = proj.y / 100;
+      wrap.dataset.fracX = fracX;
+      wrap.dataset.fracY = fracY;
+      wrap.dataset.baseW = proj.w;
+      wrap.style.zIndex = 10 + pi;
+
+      if (proj.thumb && proj.thumb.trim() !== '') {
+        const img = document.createElement('img');
+        img.src = proj.thumb;
+        img.alt = '';
+        img.addEventListener('error', () => {
+          wrap.classList.add('placeholder-thumb');
+          wrap.style.height = Math.round(proj.w * 0.65) + 'px';
+          wrap.innerHTML = '';
+          wrap.textContent = 'project ' + (pi + 1) + ' (path failed)';
+        });
+        wrap.appendChild(img);
+      } else {
+        wrap.classList.add('placeholder-thumb');
+        wrap.style.height = Math.round(proj.w * 0.65) + 'px';
+        wrap.textContent  = 'project ' + (pi + 1);
+      }
+
+      makeDraggable(wrap);
+
+      // Desktop: open on click
+      wrap.addEventListener('click', () => {
+        if (wrap.dataset.dragged === '1') { wrap.dataset.dragged = '0'; return; }
+        openLightbox(proj.images, 0);
+      });
+
+      // iOS: touchstart.preventDefault in makeDraggable suppresses the synthetic
+      // click, so detect a tap independently via touchend distance check
+      let tapX, tapY;
+      wrap.addEventListener('touchstart', e => {
+        tapX = e.touches[0].clientX;
+        tapY = e.touches[0].clientY;
+      }, { passive: true });
+      wrap.addEventListener('touchend', e => {
+        const dx = Math.abs(e.changedTouches[0].clientX - tapX);
+        const dy = Math.abs(e.changedTouches[0].clientY - tapY);
+        if (dx < 12 && dy < 12) openLightbox(proj.images, 0);
+      });
+
+      morePanel.appendChild(wrap);
+    });
+    layoutThumbs();
+  }
+ 
+  function makeDraggable (el) {
+    let startX, startY, origLeft, origTop, moved, active = false;
+ 
+    function onDown (e) {
+      moved = false; active = true;
+      const t = e.touches ? e.touches[0] : e;
+      startX = t.clientX; startY = t.clientY;
+      const rect = el.getBoundingClientRect();
+      origLeft = rect.left; origTop = rect.top;
+      el.style.transition = 'none';
+      el.style.zIndex = ++topZ;
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup',   onUp);
+      window.addEventListener('touchmove', onMove, { passive: false });
+      window.addEventListener('touchend',  onUp);
+      window.addEventListener('touchcancel', onUp);
+      if (e.cancelable) e.preventDefault();
+    }
+    function onMove (e) {
+      if (!active) return;
+      const t = e.touches ? e.touches[0] : e;
+      const dx = t.clientX - startX, dy = t.clientY - startY;
+      if (Math.abs(dx) > 10 || Math.abs(dy) > 10) moved = true;
+      if (!moved) return;
+      el.style.left = (origLeft + dx) + 'px';
+      el.style.top  = (origTop  + dy) + 'px';
+      if (e.cancelable) e.preventDefault();
+    }
+    function onUp () {
+      active = false;
+      el.dataset.dragged = moved ? '1' : '0';
+      if (moved) {
+        el.dataset.fracX = parseFloat(el.style.left) / window.innerWidth;
+        el.dataset.fracY = parseFloat(el.style.top)  / window.innerHeight;
+      }
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup',   onUp);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend',  onUp);
+      window.removeEventListener('touchcancel', onUp);
+    }
+ 
+    el.addEventListener('mousedown',  onDown);
+    el.addEventListener('touchstart', onDown, { passive: false });
+  }
+
+  [$('img1-wrap'), $('video-wrap')].forEach(el => {
+    el.classList.add('draggable');
+    makeDraggable(el);
+  });
+
+  let lbImages = [], lbIndex = 0;
+ 
+  function openLightbox (images, idx) {
+    lbImages = images || [];
+    lbIndex = idx;
+    showLbSlide();
+    lightbox.classList.add('open');
+    home.classList.remove('dimmed');
+    home.classList.add('dimmed-2');
+    header.classList.add('hidden');
+    if (inMoreMode) morePanel.classList.add('dimmed');
+  }
+
+  function closeLightbox () {
+    lightbox.classList.remove('open');
+    home.classList.remove('dimmed-2');
+    header.classList.remove('hidden');
+    if (inMoreMode) morePanel.classList.remove('dimmed');
+  }
+ 
+  function syncCaptionWidth () {
+    const w = lbImg.style.display !== 'none'
+      ? lbImg.getBoundingClientRect().width
+      : lbPH.getBoundingClientRect().width;
+    if (w > 0) lbCaption.style.maxWidth = w + 'px';
+  }
+
+  function showLbSlide () {
+    const slide = lbImages[lbIndex] || {};
+    lbCaption.style.maxWidth = '';
+    if (slide.src && slide.src.trim() !== '') {
+      lbImg.onload  = syncCaptionWidth;
+      lbImg.onerror = () => {
+        lbImg.style.display = 'none';
+        lbPH.style.display  = 'flex';
+        lbPH.textContent    = 'failed to load — check the path';
+        requestAnimationFrame(syncCaptionWidth);
+      };
+      lbImg.src = slide.src;
+      lbImg.style.display = 'block';
+      lbPH.style.display  = 'none';
+      if (lbImg.complete) requestAnimationFrame(syncCaptionWidth);
+    } else {
+      lbImg.style.display = 'none';
+      lbPH.style.display  = 'flex';
+      lbPH.textContent    = 'no image src — add one in projects-data';
+      requestAnimationFrame(syncCaptionWidth);
+    }
+    lbCaption.textContent = slide.caption || '';
+    $('lb-prev').classList.toggle('disabled', lbIndex <= 0);
+    $('lb-next').classList.toggle('disabled', lbIndex >= lbImages.length - 1);
+  }
+ 
+  $('lb-prev').addEventListener('click', () => {
+    if (lbIndex > 0) { lbIndex--; showLbSlide(); }
+  });
+  $('lb-next').addEventListener('click', () => {
+    if (lbIndex < lbImages.length - 1) { lbIndex++; showLbSlide(); }
+  });
+  $('lb-close').addEventListener('click', closeLightbox);
+ 
+  document.addEventListener('keydown', e => {
+    if (!lightbox.classList.contains('open')) return;
+    if (e.key === 'ArrowLeft'  && lbIndex > 0) { lbIndex--; showLbSlide(); }
+    if (e.key === 'ArrowRight' && lbIndex < lbImages.length - 1) { lbIndex++; showLbSlide(); }
+    if (e.key === 'Escape') closeLightbox();
+  });
+ 
+  let touchStartX = 0;
+  lightbox.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+  lightbox.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 50) {
+      if (dx < 0 && lbIndex < lbImages.length - 1) { lbIndex++; showLbSlide(); }
+      if (dx > 0 && lbIndex > 0) { lbIndex--; showLbSlide(); }
+    }
+  });
+
+  window.addEventListener('resize', layoutThumbs);
+
+  // Block right-click on media elements
+  document.addEventListener('contextmenu', e => {
+    if (e.target.closest('img, video')) e.preventDefault();
+  });
+
+  // Block Ctrl+S (save page)
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') e.preventDefault();
+  }, true);
+
+  // Block native drag-to-save on images/video, but leave .draggable wrappers
+  // and .more-thumb children alone (they use custom JS drag via mousedown)
+  document.addEventListener('dragstart', e => {
+    if (e.target.closest('img, video') && !e.target.closest('.draggable, .more-thumb')) {
+      e.preventDefault();
+    }
+  });
+})();
+</script>
+</body>
+</html>
