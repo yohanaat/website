@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="keywords" content="Architecture, Spatial Module">
+<meta name="description" content="Yohana Ansari-Thomas is a designer and researcher living in Brooklyn, New York. Prior, he worked as a designer (etc.) in Oakland, CA.">
 <title>Yohana Ansari-Thomas</title>
 <style>
-  /* ============================================================
-     CONFIGURATION — edit these to adjust layout
-  ============================================================ */
+  /* CONFIGURATION — adjust layout */
   :root {
     --img-padding: 32px;
     --img1-width: 48vw;
@@ -181,7 +181,7 @@
   /* Info panel sits above more-panel so bio text is readable over dimmed thumbs */
   #info-panel           { z-index: 210; }
 
-  /* Home media elements become draggable while more is open */
+  /* Home media elements draggable while more is open */
   #img1-wrap.draggable,
   #video-wrap.draggable {
     cursor: grab;
@@ -404,7 +404,9 @@
         { "src": "images/fr-2023/fr_elevation.jpg", "caption": "Field Recordings (2023)" },
         { "src": "images/fr-2023/fr_section.jpg", "caption": "Field Recordings (2023)" },
         { "src": "images/fr-2023/fr_detail.jpg", "caption": "Field Recordings (2023)" },
-        { "src": "images/fr-2023/fr_shareddetail.jpg", "caption": "Field Recordings (2023)" }
+        { "src": "images/fr-2023/fr_shareddetail.jpg", "caption": "Field Recordings (2023)" },
+        { "src": "images/fr-2023/fr_img1.jpg", "caption": "Field Recordings (2023)" },
+        { "src": "images/fr-2023/fr_img2.jpg", "caption": "Field Recordings (2023)" }
       ]
     },
     {
@@ -422,7 +424,7 @@
       "thumb": "images/sfss_lamp.jpg",
       "x": 20, "y": 52, "w": 260,
       "images": [
-        { "src": "images/sfss_lamp.jpg", "caption": "Superfast Scrap Lamp Study (2025)" }
+        { "src": "images/sfss_lamp.jpg", "caption": "Scrap Lamp Study (2025)" }
       ]
     },
 
@@ -739,10 +741,8 @@
 
   window.addEventListener('resize', layoutThumbs);
 
-  // Block right-click on media elements
-  document.addEventListener('contextmenu', e => {
-    if (e.target.closest('img, video')) e.preventDefault();
-  });
+  // Block right-click context menu site-wide
+  document.addEventListener('contextmenu', e => e.preventDefault());
 
   // Block Ctrl+S (save page)
   document.addEventListener('keydown', e => {
